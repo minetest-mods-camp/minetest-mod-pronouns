@@ -421,11 +421,87 @@ function pronouns.can_remove(actor, target, pros)
 end
 
 
+-- Nametag Hooks
+
+local update_player_tag  -- forward decl
+
+local function default_pre_hook(player)
+    return player:get_player_name()
+end
+
+local function default_post_hook(player, tag)
+    return tag
+end
+
+local preproc, postproc = default_pre_hook, default_post_hook
+
+local function default_pronouns_handler(player, pronouns_tag)
+    local tag = pname
+    if preproc then tag = preproc(player) end
+
+    if pronouns_tag and pronouns_tag:len() > 0 then
+        tag = ("%s (%s)"):format(tag, pronouns_tag)
+    end
+
+    if postproc then tag = postproc(player, tag) end
+
+    local props = player:get_properties()
+    if tag ~= props.nametag then
+        player:set_properties({nametag = tag})
+    end
+end
+
+local pronouns_handler = default_pronouns_handler
+
+-- Sets or unsets a preprocessing hook (pre) and a postprocessing hook (post),
+-- returning the old values.
+--
+-- * pre(player) - Returns a nametag for the given player, without any pronouns added.
+--   With no hook, the player's name is used.
+-- * post(player, tag) - Returns a final nametag for the given player, where the tag
+--   parameter is the pronoun-adjusted nametag "<name> (<pronoun1>/<pronoun2>/...)".
+--   With no hook, the tag isn't modified.
+--
+-- These hooks are designed for compatibility with other mods that set players'
+-- nametags, and/or that want to filter certain strings if the restricted pronoun
+-- whitelist isn't being used.
+--
+-- Alternately, a whole different pronouns handler function can be set (see
+-- pronouns.set_pronouns_handler), in which case it is up to the mod which defines that
+-- handler function whether it uses these hooks or ignores them.
+function pronouns.set_nametag_hooks(pre, post)
+    local old_pre, old_post = preproc, postproc
+    preproc, postproc = pre, post
+    for _, player in ipairs(minetest.get_connected_players()) do
+        update_player_tag(player)
+    end
+    return old_pre, old_post
+end
+
+-- Sets a handler function handlerf(player, pronouns_tag) which is called when a player
+-- joins, their pronoun list is changed, or this function is called.  Returns the old
+-- handler function.  The pronouns_tag argument will be nil if the player's list of
+-- pronouns is empty.
+--
+-- The default handler uses the pre and post hooks (see pronouns.set_nametag_hooks) to
+-- determine the name portion of the nametag (pre hook), construct a
+-- "<name> (<pronouns>)" nametag, modify that tag (post hook), and set the nametag by
+-- modifying the player ObjectRef properties.
+function pronouns.set_pronouns_handler(handlerf)
+    local old = pronouns_handler
+    if handlerf ~= old then
+        pronouns_handler = handlerf
+        for _, player in ipairs(minetest.get_connected_players()) do
+            update_player_tag(player)
+        end
+    end
+    return old
+end
+
+
 -- Player Pronouns
 
-local preproc, postproc = nil, nil
-
-local function update_player_tag(player)
+update_player_tag = function(player)  -- local declared above
     local pname
     if type(player) == "string" then
         player, pname = minetest.get_player_by_name(player), player
@@ -441,42 +517,13 @@ local function update_player_tag(player)
         save_player_pronouns()
     end
 
-    local tag, plist = pname, unique_list_from_lists_and_sets(ppro.set or {})
-    if preproc then tag = preproc(player) end
-    if #plist > 0 then
-        tag = ("%s (%s)"):format(tag, table.concat(plist, "/"))
-    end
-    if postproc then tag = postproc(player, tag) end
+    local plist = unique_list_from_lists_and_sets(ppro.set or {})
 
-    local props = player:get_properties()
-    if tag ~= props.nametag then
-        props.nametag = tag
-        player:set_properties(props)
-    end
+    local hf = pronouns_handler or default_pronouns_handler
+    hf(player, #plist > 0 and table.concat(plist, "/") or nil)
 end
 
 minetest.register_on_joinplayer(update_player_tag)
-
--- Sets or unsets a preprocessing hook (pre) and a postprocessing hook (post),
--- returning the old values.
---
--- * pre(player) - Returns a nametag for the given player, without any pronouns added.
---   With no hook, the player's name is used.
--- * post(player, tag) - Returns a final nametag for the given player, where the tag
---   parameter is the pronoun-adjusted nametag "<name> (<pronoun1>/<pronoun2>/...)".
---   With no hook, the tag isn't modified.
---
--- These hooks are designed for compatibility with other mods that set players'
--- nametags, and/or that want to filter certain strings if the restricted pronoun
--- whitelist isn't being used.
-function pronouns.set_nametag_hooks(pre, post)
-    local old_pre, old_post = preproc, postproc
-    preproc, postproc = pre, post
-    for _, player in ipairs(minetest.get_connected_players()) do
-        update_player_tag(player)
-    end
-    return old_pre, old_post
-end
 
 -- Returns a (copied) list or set of pronoun strings for the player.
 function pronouns.get(player)
@@ -552,18 +599,7 @@ function pronouns.set(player_name, pronouns, approved)
     end
 
     local player = minetest.get_player_by_name(player_name)
-    if player then
-        local tag = player_name
-        if preproc then tag = preproc(player) end
-        if #pronouns > 0 then
-            tag = ("%s (%s)"):format(tag, table.concat(pronouns, "/"))
-        end
-        if postproc then tag = postproc(player, tag) end
-
-        local props = player:get_properties()
-        props.nametag = tag
-        player:set_properties(props)
-    end
+    if player then update_player_tag(player) end
 
     return old_pros, old_aset
 end

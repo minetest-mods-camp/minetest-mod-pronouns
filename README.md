@@ -55,7 +55,7 @@ despite length restrictions or a restricted whitelist), use the command:
 
     /pronouns
 
-To get the pronouns of someone else (like if you're only interacting with theim in chat
+To get the pronouns of someone else (like if you're only interacting with them in chat
 and can't see their nametag), use the command:
 
     /pronouns for <player>
@@ -155,6 +155,14 @@ The function returns the old pair of hooks, so the calling mod can call them in 
 "chain of responsibility" type pattern when and if appropriate.  Note that using `nil`
 for either hook will remove any existing one, so your mod may want to test the return
 values and set the old hook back in place if it doesn't have one to install itself.
+
+The whole mechanism of handling pronouns for logged in players can also be replaced by
+setting a pronoun handler function using:
+
+    pronouns.set_pronoun_handler(handlerf)
+
+which allows another mod to replace or augment the use of the hooks and setting of the
+player nametag property entirely.
 
 ### Player Pronouns
 
