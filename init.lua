@@ -436,7 +436,7 @@ end
 local preproc, postproc = default_pre_hook, default_post_hook
 
 local function default_pronouns_handler(player, pronouns_tag)
-    local tag = pname
+    local tag = player:get_player_name()
     if preproc then tag = preproc(player) end
 
     if pronouns_tag and pronouns_tag:len() > 0 then
