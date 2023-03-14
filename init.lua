@@ -20,11 +20,30 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 local modname = minetest.get_current_modname()
 
 
+local update_player_tag  -- forward decl
+
+
 -- Persistence
 
 local storage = minetest.get_mod_storage()
 
 local settings = nil
+local function _reset_settings()
+    settings = {
+        max_length       = 6,
+        max_total_length = 20,
+        restricted       = false,
+        preapproved = {
+            e    = true, em   = true, eir   = true,
+            ey   = true,
+            he   = true, him  = true, his   = true,
+            she  = true, her  = true,
+            they = true, them = true, their = true,
+            xe   = true, xem  = true, xyr   = true,
+            ze   = true, zem  = true, zir   = true,
+        },
+    }
+end
 do
     local ser = storage:get("settings")
     if ser then
@@ -34,34 +53,27 @@ do
         end
     end
     if not settings then
-        settings = {
-            max_length       = 6,
-            max_total_length = 20,
-            restricted       = false,
-            preapproved = {
-                e    = true, em   = true, eir   = true,
-                ey   = true,
-                he   = true, him  = true, his   = true,
-                she  = true, her  = true,
-                they = true, them = true, their = true,
-                xe   = true, xem  = true, xyr   = true,
-                ze   = true, zem  = true, zir   = true,
-            },
-        }
+        _reset_settings()
     end
 end
 
 local player_pronouns = nil
+local function _clear_all()
+    player_pronouns = {}
+    for _, player in ipairs(minetest.get_connected_players()) do
+        update_player_tag(player)
+    end
+end
 do
     local ser = storage:get("player_pronouns")
     if ser then
         player_pronouns = minetest.parse_json(ser)
-        if not player_pronons then
+        if not player_pronouns then
             print("Player pronoun database has been reset.")
         end
     end
     if not player_pronouns then
-        player_pronouns = {}
+        _clear_all()
     end
 end
 
@@ -277,6 +289,12 @@ function pronouns.remove_preapproved(pros)
     return old
 end
 
+-- Puts all settings back to their initial state, as if the mod were first installed.
+function pronouns.reset_settings()
+    _reset_settings()
+    save_settings()
+end
+
 
 -- Permissions
 
@@ -285,6 +303,26 @@ minetest.register_privilege(
     "Set pronouns on other players, pre-approve pronouns, and bypass pronoun "..
         "restrictions."
 )
+
+-- Checks whether actor (player ObjectRef or name string) is allowed to moderate
+-- pronouns settings (in other words, has the pronouns privilege).
+--
+-- Returns allowed, err where err is a string if not allowed.
+function pronouns.can_moderate(actor)
+    local aname
+    if type(actor) == "string" then
+        aname, actor = actor, minetest.get_player_by_name(actor)
+    else
+        aname = actor:get_player_name()
+    end
+    if not aname or not actor then
+        return false, "Unknown actor."
+    end
+    if not minetest.get_player_privs(aname).pronouns then
+        return false, "This operation requires the pronouns privilege."
+    end
+    return true
+end
 
 -- Checks whether actor (player ObjectRef or name string) is allowed to set pronouns on
 -- target (player ObjectRef or name string), and whether actor has the pronouns
@@ -422,8 +460,6 @@ end
 
 
 -- Nametag Hooks
-
-local update_player_tag  -- forward decl
 
 local function default_pre_hook(player)
     return player:get_player_name()
@@ -655,6 +691,12 @@ function pronouns.remove(player_name, pros, with_approval)
     return pronouns.set(player_name, new, aset)
 end
 
+-- Sets all players' pronouns to empty/unspecified.
+function pronouns.clear_all()
+    _clear_all()
+    save_player_pronouns()
+end
+
 
 -- Commands
 
@@ -725,6 +767,8 @@ minetest.register_chatcommand("pronounsconf", {
          "max-total-length <n> | "..
          "restrict <bool> | "..
          "approve [add|remove] <pronouns>"..
+         "reset-settings"..
+         "clear-all"..
         "]",
 
     description = "Configure pronoun restrictions.",
@@ -826,6 +870,30 @@ minetest.register_chatcommand("pronounsconf", {
 
                 setf(pronouns.parse(param))
                 return output()
+            end
+        end
+        do
+            local si, ei = param:find("^reset[_-]settings$")
+            if not si then
+                if param:find("^reset[_-]settings%s") then
+                    return false, "-!- Unexpected reset-settings argument."
+                end
+            end
+            if si then
+                pronouns.reset_settings()
+                return output()
+            end
+        end
+        do
+            local si, ei = param:find("^clear[_-]all$")
+            if not si then
+                if param:find("^clear[_-]all%s") then
+                    return false, "-!- Unexpected clear-all argument."
+                end
+            end
+            if si then
+                pronouns.clear_all()
+                return true, "All pronouns cleared."
             end
         end
         do

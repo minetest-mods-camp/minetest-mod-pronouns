@@ -122,6 +122,7 @@ These are the API equivalent of the settings commands.
     pronouns.set_preapproved(pros)
     pronouns.add_preapproved(pros)
     pronouns.remove_preapproved(pros)
+    pronouns.reset_settings()
 
 ### Permissions
 
@@ -132,6 +133,7 @@ functions which actually do the setting; cooperation between mods is assumed, so
 presumed that if another mod "bypasses" the checks by failing to call these methods,
 there is a good reason for it.
 
+    pronouns.can_moderate(actor)
     pronouns.check_privs(actor, target)
     pronouns.can_set(actor, target, pros)
     pronouns.can_add(actor, target, pros)
@@ -173,3 +175,8 @@ These are the API equivalents of the `/pronouns` commands.
     pronouns.set(player_name, pros, approved)
     pronouns.add(player_name, pros, with_approval)
     pronouns.remove(player_name, pros, with_approval)
+    pronouns.clear_all()
+
+### Misc
+
+    pronouns.parse(str)
