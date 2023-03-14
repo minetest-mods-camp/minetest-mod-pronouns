@@ -228,10 +228,10 @@ function pronouns.get_preapproved()
     return copy_list_or_set(settings.preapproved or {})
 end
 
--- pronouns is a list (ordered, positive integer indices, # length operator) or a set
+-- pros is a list (ordered, positive integer indices, # length operator) or a set
 -- (unordered, only keys matter).  The order of a list is ignored.
-function pronouns.set_preapproved(pronouns)
-    local old, pset = settings.preapproved or {}, set_from_lists_and_sets(pronouns)
+function pronouns.set_preapproved(pros)
+    local old, pset = settings.preapproved or {}, set_from_lists_and_sets(pros)
     if sets_equal(pset, old) then
         old = copy_list_or_set(old)
     else
@@ -241,11 +241,11 @@ function pronouns.set_preapproved(pronouns)
     return old
 end
 
--- pronouns is a list (ordered, positive integer indices, # length operator) or a set
+-- pros is a list (ordered, positive integer indices, # length operator) or a set
 -- (unordered, only keys matter).  The order of a list is ignored.
-function pronouns.add_preapproved(pronouns)
+function pronouns.add_preapproved(pros)
     local old  = settings.preapproved or {}
-    local pset = set_from_lists_and_sets(old, pronouns)
+    local pset = set_from_lists_and_sets(old, pros)
     if sets_equal(pset, old) then
         old = copy_list_or_set(old)
     else
@@ -255,10 +255,10 @@ function pronouns.add_preapproved(pronouns)
     return old
 end
 
--- pronouns is a list (ordered, positive integer indices, # length operator) or a set
+-- pros is a list (ordered, positive integer indices, # length operator) or a set
 -- (unordered, only keys matter).  The order of a list is ignored.
-function pronouns.remove_preapproved(pronouns)
-    local rset = set_from_lists_and_sets(pronouns)
+function pronouns.remove_preapproved(pros)
+    local rset = set_from_lists_and_sets(pros)
 
     local old, pset, changed = settings.preapproved or {}, {}, false
     for p in pairs(old) do
@@ -324,7 +324,7 @@ function pronouns.check_privs(actor, target)
     return true, false
 end
 
-local function _can_add(with_priv, target, pronouns)
+local function _can_add(with_priv, target, pros)
     local tname = player_to_name(target)
 
     local restricted  = settings.restricted
@@ -335,8 +335,8 @@ local function _can_add(with_priv, target, pronouns)
 
     local max_len = settings.max_length
     if max_len and max_len > 0 or restricted then
-        pronouns = set_from_lists_and_sets(pronouns)
-        for p in pairs(pronouns) do
+        pros = set_from_lists_and_sets(pros)
+        for p in pairs(pros) do
             if not preapproved[p] and not approved[p] then
                 if restricted then
                     return false, (
@@ -355,17 +355,17 @@ local function _can_add(with_priv, target, pronouns)
     return true
 end
 
-local function _can_set(with_priv, target, pronouns)
-    local allowed, err = _can_add(with_priv, target, pronouns)
+local function _can_set(with_priv, target, pros)
+    local allowed, err = _can_add(with_priv, target, pros)
     if not allowed then return false, err end
 
     if with_priv then return true end
 
-    pronouns = unique_list_from_lists_and_sets(pronouns)
-    if #pronouns > 1 then
+    pros = unique_list_from_lists_and_sets(pros)
+    if #pros > 1 then
         local max_total_len = settings.max_total_length
         if max_total_len and max_total_len > 0 then
-            local pronouns_tag = table.concat(pronouns, "/")
+            local pronouns_tag = table.concat(pros, "/")
             if #pronouns_tag > max_total_len then
                 return false, (
                     "List of pronouns '%s' exceeds maximum length %d."
@@ -543,14 +543,13 @@ end
 
 -- Sets the list of a player's pronouns.
 --
--- pronouns is a list or set of pronouns.
+-- pros is a list or set of pronouns.
 --
 -- approved can be a list or set of approved pronouns for the player, or some other
--- truthy value indicating that pronouns should also be used as the approved set.
+-- truthy value indicating that pros should also be used as the approved set.
 --
--- Returns old values for pronouns, approved (the former a list or set, the latter a
--- set).
-function pronouns.set(player_name, pronouns, approved)
+-- Returns old values for pros, approved (the former a list or set, the latter a set).
+function pronouns.set(player_name, pros, approved)
     local ppro = player_pronouns[player_name]
     if not ppro then
         ppro = {}
@@ -558,23 +557,23 @@ function pronouns.set(player_name, pronouns, approved)
     end
 
     local old_pros, pros_changed = ppro.set or {}, false
-    if pronouns[1] then
-        pronouns = unique_list_from_lists_and_sets(pronouns)
+    if pros[1] then
+        pros = unique_list_from_lists_and_sets(pros)
         if old_pros[1] then
-            pros_changed = not lists_equal(pronouns, old_pros)
+            pros_changed = not lists_equal(pros, old_pros)
         else
             pros_changed = true
         end
     else
-        pronouns = set_from_lists_and_sets(pronouns)
+        pros = set_from_lists_and_sets(pros)
         if old_pros[1] then
             pros_changed = true
         else
-            pros_changed = not sets_equal(pronouns, old_pros)
+            pros_changed = not sets_equal(pros, old_pros)
         end
     end
     if pros_changed then
-        ppro.set = pronouns
+        ppro.set = pros
     else
         old_pros = copy_list_or_set(old_pros)
     end
@@ -584,7 +583,7 @@ function pronouns.set(player_name, pronouns, approved)
         if type(approved) == "table" then
             aset = set_from_lists_and_sets(approved)
         else
-            aset = set_from_lists_and_sets(pronouns)
+            aset = set_from_lists_and_sets(pros)
         end
         aset_changed = not sets_equal(aset, old_aset)
     end
@@ -609,8 +608,7 @@ end
 -- If with_approval is true, pros is also added to the player's list of approved
 -- pronouns.
 --
--- Returns old values for pronouns, approved (the former a list or set, the latter a
--- set).
+-- Returns old values for pros, approved (the former a list or set, the latter a set).
 function pronouns.add(player_name, pros, with_approval)
     local ppro = player_pronouns[player_name] or {}
 
@@ -629,8 +627,7 @@ end
 -- If with_approval is true, pros is also removed from the player's list of approved
 -- pronouns.
 --
--- Returns old values for pronouns, approved (the former a list or set, the latter a
--- set).
+-- Returns old values for pros, approved (the former a list or set, the latter a set).
 function pronouns.remove(player_name, pros, with_approval)
     local ppro = player_pronouns[player_name] or {}
 
@@ -712,13 +709,13 @@ function pronouns.parse(str)
         args[#args+1] = arg
     end
 
-    local pronouns = {}
+    local pros = {}
     for _, arg in ipairs(args) do
         arg = normalize_space(trim_space(arg))
-        if arg:len() > 0 then pronouns[#pronouns+1] = arg end
+        if arg:len() > 0 then pros[#pros+1] = arg end
     end
 
-    return pronouns
+    return pros
 end
 
 minetest.register_chatcommand("pronounsconf", {

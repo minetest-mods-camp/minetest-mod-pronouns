@@ -119,9 +119,9 @@ These are the API equivalent of the settings commands.
     pronouns.get_restricted()
     pronouns.set_restricted(bool)
     pronouns.get_preapproved()
-    pronouns.set_preapproved(pronouns)
-    pronouns.add_preapproved(pronouns)
-    pronouns.remove_preapproved(pronouns)
+    pronouns.set_preapproved(pros)
+    pronouns.add_preapproved(pros)
+    pronouns.remove_preapproved(pros)
 
 ### Permissions
 
@@ -170,6 +170,6 @@ These are the API equivalents of the `/pronouns` commands.
 
     pronouns.get(player)
     pronouns.get_approved(player)
-    pronouns.set(player_name, pronouns, approved)
+    pronouns.set(player_name, pros, approved)
     pronouns.add(player_name, pros, with_approval)
     pronouns.remove(player_name, pros, with_approval)
