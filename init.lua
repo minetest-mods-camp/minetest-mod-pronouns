@@ -750,6 +750,11 @@ minetest.register_chatcommand("pronounsconf", {
 
         do
             local si, ei = param:find("^max[_-]?length%s+")
+            if not si then
+                if param:find("^max[_-]?length$") then
+                    return false, "-!- Missing max-length argument."
+                end
+            end
             if si then
                 pronouns.set_max_length(param:sub(ei+1))
                 return output()
@@ -757,6 +762,11 @@ minetest.register_chatcommand("pronounsconf", {
         end
         do
             local si, ei = param:find("^max[_-]?total[_-]?length%s+")
+            if not si then
+                if param:find("^max[_-]?total[_-]?length$") then
+                    return false, "-!- Missing max-total-length argument."
+                end
+            end
             if si then
                 pronouns.set_max_total_length(param:sub(ei+1))
                 return output()
@@ -767,6 +777,11 @@ minetest.register_chatcommand("pronounsconf", {
             if not si then
                 si, ei = param:find("^restrict%s+")
             end
+            if not si then
+                if param:find("^restricted$") or param:find("^restrict$") then
+                    return false, "-!- Missing restrict argument."
+                end
+            end
             if si then
                 param = param:sub(ei+1):lower()
                 pronouns.set_restricted(
@@ -776,19 +791,34 @@ minetest.register_chatcommand("pronounsconf", {
             end
         end
         do
-            local si, ei, op = param:find("^preapproved?%s+")
+            local si, ei = param:find("^preapproved?%s+")
             if not si then
-                si, ei, op = param:find("^approved?%s+")
+                si, ei = param:find("^approved?%s+")
+            end
+            if not si then
+                if param:find("^preapproved?$") or param:find("^approved?$") then
+                    return false, "-!- Missing approve argument."
+                end
             end
             if si then
                 param = param:sub(ei+1)
 
                 local setf   = pronouns.set_preapproved
                 local si, ei = param:find("^add%s+")
+                if not si then
+                    if param:find("^add$") then
+                        return false, "-!- Missing approve argument."
+                    end
+                end
                 if si then
                     setf, param = pronouns.add_preapproved, param:sub(ei+1)
                 else
                     si, ei = param:find("^remove%s+")
+                    if not si then
+                        if param:find("^remove$") then
+                        return false, "-!- Missing approve argument."
+                        end
+                    end
                     if si then
                         setf, param = pronouns.remove_preapproved, param:sub(ei+1)
                     end
@@ -853,6 +883,11 @@ minetest.register_chatcommand("pronouns", {
 
         do
             local si, ei = param:find("^add%s+")
+            if not si then
+                if param:find("^add$") then
+                    return false, "-!- Missing pronouns argument."
+                end
+            end
             if si then
                 local plist  = pronouns.parse(param:sub(ei+1))
                 local allowed, err = pronouns.can_add(player, target, plist)
@@ -865,6 +900,11 @@ minetest.register_chatcommand("pronouns", {
         end
         do
             local si, ei = param:find("^remove%s+")
+            if not si then
+                if param:find("^remove$") then
+                    return false, "-!- Missing pronouns argument."
+                end
+            end
             if si then
                 local plist = pronouns.parse(param:sub(ei+1))
                 local allowed, err = pronouns.can_remove(player, target, plist)
