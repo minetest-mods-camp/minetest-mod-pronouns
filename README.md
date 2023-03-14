@@ -86,7 +86,13 @@ Each setting may be changed using an appropriate subcommand:
     /pronounsconf approve add <pronouns>
     /pronounsconf approve remove <pronouns>
 
-See also (`/help pronounsconf`).
+See also (`/help pronounsconf`).  The commands
+
+    /pronounsconf reset-settings
+    /pronounsconf clear-all
+
+reset the settings (back to the "factory defaults" as it were) and set all player
+pronouns to empty/unspecified, respectively.
 
 To set the pronouns for another player, use the commands:
 
